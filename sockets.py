@@ -82,8 +82,7 @@ myWorld = World()
 
 def set_listener( entity, data ):
     ''' do something with the update ! '''
-    for client in clients:
-        client.put(json.dumps({ entity: data }))   
+
 
 myWorld.add_set_listener( set_listener )
         
@@ -101,7 +100,7 @@ def read_ws(ws,client):
             if (msg is not None):
                 packet = json.loads(msg)
                 for entity in packet:
-                    myWorld.update(entity, packet[entity])
+                    myWorld.set(entity, packet[entity])
                 send_all_json(packet)
             else:
                 break
@@ -161,7 +160,6 @@ def clear():
     '''Clear the world out!'''
     myWorld.clear()
     return jsonify(myWorld.world())
-
 
 
 if __name__ == "__main__":
