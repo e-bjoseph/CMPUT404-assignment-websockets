@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import flask
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_sockets import Sockets
 import gevent
 from gevent import queue
@@ -27,6 +27,13 @@ sockets = Sockets(app)
 app.debug = True
 
 clients = list()
+
+def send_all(msg):
+    for client in clients:
+        client.put( msg )
+
+def send_all_json(obj):
+    send_all( json.dumps(obj) )
 
 class Client:
     def __init__(self):
@@ -95,11 +102,12 @@ def read_ws(ws,client):
                 packet = json.loads(msg)
                 for entity in packet:
                     myWorld.update(entity, packet[entity])
+                send_all_json(packet)
             else:
                 break
-    except:
-        '''Done'''
-
+    except Exception as e:
+        print("WS ERR: %s" % e)
+        
 @sockets.route('/subscribe')
 def subscribe_socket(ws):
     '''Fufill the websocket URL of /subscribe, every update notify the
@@ -112,7 +120,7 @@ def subscribe_socket(ws):
             msg = client.get()
             ws.send(msg)
     except Exception as e:
-        print("WS Error %s" % e)
+        print("WS ERR: %s" % e)
     finally:
         clients.remove(client)
         gevent.kill(g)
@@ -135,24 +143,24 @@ def update(entity):
     '''update the entities via this interface'''
     for k,v in flask_post_json().items():
         myWorld.update(entity,k,v)
-    return myWorld.get(entity)
+    return jsonify(myWorld.get(entity))
 
 @app.route("/world", methods=['POST','GET'])    
 def world():
     '''you should probably return the world here'''
-    return myWorld.world()
+    return jsonify(myWorld.world())
 
 @app.route("/entity/<entity>")    
 def get_entity(entity):
     '''This is the GET version of the entity interface, return a representation of the entity'''
-    return myWorld.get(entity)
+    return jsonify(myWorld.get(entity))
 
 
 @app.route("/clear", methods=['POST','GET'])
 def clear():
     '''Clear the world out!'''
     myWorld.clear()
-    return myWorld.world()
+    return jsonify(myWorld.world())
 
 
 
